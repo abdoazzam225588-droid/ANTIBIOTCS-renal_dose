@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renal Antibiotic Dose Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #F3F6F5;
+    --surface: #FFFFFF;
+    --ink: #12292F;
+    --muted: #5B6F74;
+    --line: #D9E2E0;
+    --accent: #0E6F68;
+    --accent-ink: #FFFFFF;
+    --load: #A24A05;
+    --load-bg: #FDF1DF;
+    --warn: #9F1D1D;
+    --warn-bg: #FBE9E7;
+    --caution: #5B3FA0;
+    --caution-bg: #EFEAFB;
+    --seg-off: #E4EBE9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1719;
+      --surface: #16242A;
+      --ink: #E6F0EE;
+      --muted: #93A9AD;
+      --line: #26383E;
+      --accent: #4FD1C5;
+      --accent-ink: #0E1719;
+      --load: #F5B34A;
+      --load-bg: #2B2110;
+      --warn: #F2A19A;
+      --warn-bg: #2E1716;
+      --caution: #C3B1F5;
+      --caution-bg: #241C3A;
+      --seg-off: #22343A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1719;
+    --surface: #16242A;
+    --ink: #E6F0EE;
+    --muted: #93A9AD;
+    --line: #26383E;
+    --accent: #4FD1C5;
+    --accent-ink: #0E1719;
+    --load: #F5B34A;
+    --load-bg: #2B2110;
+    --warn: #F2A19A;
+    --warn-bg: #2E1716;
+      --caution: #C3B1F5;
+      --caution-bg: #241C3A;
+    --seg-off: #22343A;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 4px; }
+  .by { color: var(--ink); font-size: 14px; font-weight: 500; margin: 0 0 16px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .field.full { grid-column: 1 / -1; }
+  label, .lbl { font-size: 14px; color: var(--muted); }
+  input[type="text"] {
+    width: 100%;
+    font: inherit; font-size: 18px; font-weight: 500;
+    color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px;
+  }
+  input[type="text"]:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type="text"]::placeholder { color: var(--muted); opacity: .6; }
+
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--seg-off); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button {
+    font: inherit; font-size: 15px; color: var(--muted);
+    background: transparent; border: 0; border-radius: 8px; padding: 9px 6px; cursor: pointer; min-height: 40px;
+  }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+
+  .err { color: var(--warn); font-size: 14px; margin: 10px 0 0; min-height: 0; }
+
+  .hero { margin-top: 16px; padding: 16px 14px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .hero .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .hero .num { font-size: 54px; font-weight: 600; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; direction: ltr; }
+  .hero .unit { color: var(--muted); font-size: 14px; direction: ltr; }
+  .hero .cat { margin-inline-start: auto; font-weight: 600; font-size: 15px; }
+  .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 14px; }
+  .scale div { height: 8px; border-radius: 4px; background: var(--seg-off); }
+  .scale div.on { background: var(--accent); }
+  .scale-labels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; font-size: 11px; color: var(--muted); text-align: center; direction: ltr; }
+  .formula { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+
+  .filters { margin: 20px 0 8px; }
+  .filters h2 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .filters .seg button { font-size: 13.5px; padding: 9px 4px; }
+
+  ul.drugs { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .drug { padding: 12px 14px; border-top: 1px solid var(--line); border-inline-start: 4px solid transparent; }
+  .drug:first-child { border-top: 0; }
+  .drug.hasload { border-inline-start-color: var(--load); }
+  .drug .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .drug .name { font-weight: 600; font-size: 16px; direction: ltr; unicode-bidi: isolate; }
+  .drug .usual { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .pill { font-size: 12px; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+  .pill.yes { background: var(--load-bg); color: var(--load); font-weight: 600; }
+  .pill.no { background: var(--seg-off); color: var(--muted); }
+  .line { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 3px 0; align-items: start; }
+  .tag { font-size: 12px; padding-top: 3px; color: var(--muted); }
+  .line.load .tag { color: var(--load); font-weight: 600; }
+  .line.maint .tag { color: var(--accent); font-weight: 600; }
+  .txt { font-size: 15px; unicode-bidi: plaintext; }
+  .hint { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .pill.avoid { background: var(--warn); color: var(--surface); font-weight: 600; }
+  .pill.caution { background: var(--caution-bg); color: var(--caution); font-weight: 600; }
+  .drug.avoid { background: var(--warn-bg); }
+  .line.flag.avoid .tag { color: var(--warn); font-weight: 600; }
+  .line.flag.caution .tag { color: var(--caution); font-weight: 600; }
+  .avoidbox { margin-bottom: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
+  .avoidbox.has { background: var(--warn-bg); border-color: transparent; }
+  .avoidbox div + div { margin-top: 6px; }
+  .avoidbox b.r { color: var(--warn); }
+  .avoidbox b.p { color: var(--caution); }
+  .panel + .panel { margin-top: 12px; }
+  select#dz { width: 100%; font: inherit; font-size: 16px; font-weight: 500; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  select#dz:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dzbox { margin-bottom: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--accent); font-size: 14px; }
+  .dzbox div + div { margin-top: 6px; }
+  .dzbox b { color: var(--accent); font-size: 15px; }
+  .dzbox .tip { color: var(--muted); font-size: 13px; }
+  .pill.first { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .pill.alt { background: var(--seg-off); color: var(--ink); }
+  .pill.add { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .line.dzl .tag { color: var(--accent); font-weight: 600; }
+  details.more { margin-top: 6px; }
+  details.more summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 500; padding: 6px 0; min-height: 32px; }
+  details.more[open] summary { margin-bottom: 4px; }
+  .line.info .tag { color: var(--muted); font-weight: 600; }
+  .line.info.no .tag { color: var(--warn); }
+  .empty { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 15px; }
+
+  .notes { margin-top: 18px; padding: 14px; border-radius: 14px; background: var(--warn-bg); color: var(--ink); font-size: 14px; }
+  .notes b { color: var(--warn); }
+  .notes ul { margin: 8px 0 0; padding-inline-start: 20px; }
+  .notes li { margin: 4px 0; }
+  .foot { margin-top: 14px; font-size: 12.5px; color: var(--muted); text-align: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Renal Dose Adjustment Calculator</h1>
+  <p class="sub">Cockcroft-Gault + loading dose and maintenance dose for each drug</p>
+  <p class="by">By: Dr. Abdulrahman Azzam</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div class="field">
+        <label for="age">Age (years)</label>
+        <input id="age" type="text" inputmode="decimal" autocomplete="off" placeholder="65">
+      </div>
+      <div class="field">
+        <label for="wt">Weight (kg)</label>
+        <input id="wt" type="text" inputmode="decimal" autocomplete="off" placeholder="80">
+      </div>
+      <div class="field">
+        <span class="lbl" id="sexLbl">Sex</span>
+        <div class="seg" role="group" aria-labelledby="sexLbl" id="sexSeg">
+          <button type="button" data-v="m" aria-pressed="true">Male</button>
+          <button type="button" data-v="f" aria-pressed="false">Female</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl" id="unitLbl">Creatinine unit</span>
+        <div class="seg" role="group" aria-labelledby="unitLbl" id="unitSeg">
+          <button type="button" data-v="mg" aria-pressed="true">mg/dL</button>
+          <button type="button" data-v="um" aria-pressed="false">µmol/L</button>
+        </div>
+      </div>
+      <div class="field full">
+        <label for="scr">Serum creatinine</label>
+        <input id="scr" type="text" inputmode="decimal" autocomplete="off" placeholder="1.2">
+      </div>
+    </div>
+    <p class="err" id="err" role="alert" hidden></p>
+  </div>
+
+  <div class="panel">
+    <div class="field">
+      <label for="dz">Condition / diagnosis (optional)</label>
+      <select id="dz"><option value="">No selection (all drugs)</option></select>
+    </div>
+  </div>
+
+  <section class="hero" id="hero" hidden aria-live="polite">
+    <div class="top">
+      <span class="num" id="crcl">0</span>
+      <span class="unit">mL/min</span>
+      <span class="cat" id="cat"></span>
+    </div>
+    <div class="scale" id="scale"><div></div><div></div><div></div><div></div><div></div></div>
+    <div class="scale-labels"><span>&lt;15</span><span>15–29</span><span>30–59</span><span>60–89</span><span>≥90</span></div>
+    <p class="formula" id="formula"></p>
+  </section>
+
+  <div id="results" hidden>
+    <div class="filters">
+      <h2>Doses</h2>
+      <div class="seg" role="group" aria-label="Filter" id="fltSeg">
+        <button type="button" data-v="all" aria-pressed="true">All</button>
+        <button type="button" data-v="load" aria-pressed="false" id="fltLoad">Loading</button>
+        <button type="button" data-v="flag" aria-pressed="false" id="fltFlag">Avoid / Caution</button>
+      </div>
+    </div>
+    <div class="dzbox" id="dzBox" hidden></div>
+    <div class="avoidbox" id="avoidBox"></div>
+    <ul class="drugs" id="list"></ul>
+
+    <div class="notes">
+      <b>Before you rely on this number</b>
+      <ul>
+        <li>The <b>loading dose</b> is not adjusted for CrCl. Adjustment starts from the following dose, and beta-lactams should not be reduced in the first 24–48 hours of sepsis.</li>
+        <li>In AKI or sepsis, creatinine is not at steady state so the calculated CrCl can be inaccurate, and with augmented renal clearance the dose may end up too low.</li>
+        <li>mg/kg doses are calculated on actual body weight. With severe obesity, use adjusted body weight.</li>
+        <li>Adults only (18 years and older).</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="foot">A support tool only. Verify against Sanford, Lexicomp, or your hospital protocol before dosing.</p>
+</div>
+
+<script>
+(function () {
+  // ---------- drug data ----------
+  // bands: [min CrCl for band (after rounding), text] from highest to lowest
+  // load: fixed text, a function(weight), or null if there is no loading dose
+  var FULL = " (full dose, not reduced)";
+  function mg(w, perKg, step, cap) {
+    var v = Math.round((w * perKg) / step) * step;
+    if (cap) v = Math.min(v, cap);
+    return v;
+  }
+  var DRUGS = [
+    { n: "Piperacillin-tazobactam", usual: "3.375–4.5 g q6h",
+      load: "3.375–4.5 g" + FULL,
+      bands: [[41, "3.375 g q6h (4.5 g q6h for nosocomial pneumonia)"], [20, "2.25 g q6h"], [0, "2.25 g q8h"]] },
+    { n: "Amoxicillin-clavulanate IV", usual: "1.2 g q8h",
+      load: "1.2 g" + FULL,
+      bands: [[31, "1.2 g q8h"], [10, "600 mg q12h"], [0, "600 mg q24h"]] },
+    { n: "Cefazolin", usual: "1–2 g q8h",
+      load: "1–2 g" + FULL,
+      bands: [[35, "Full dose q8h"], [11, "Half dose q12h"], [0, "Half dose q18–24h"]] },
+    { n: "Cefepime", usual: "2 g q8h",
+      load: "2 g" + FULL,
+      bands: [[61, "2 g q8h"], [30, "2 g q12h"], [11, "2 g q24h"], [0, "1 g q24h"]] },
+    { n: "Ceftazidime", usual: "2 g q8h",
+      load: "2 g" + FULL,
+      bands: [[51, "2 g q8h"], [31, "2 g q12h"], [16, "2 g q24h"], [6, "1 g q24h"], [0, "1 g q48h"]] },
+    { n: "Meropenem", usual: "1 g q8h",
+      load: "1 g" + FULL,
+      bands: [[51, "1 g q8h"], [26, "1 g q12h"], [10, "500 mg q12h"], [0, "500 mg q24h"]] },
+    { n: "Imipenem", usual: "500 mg q6h", load: null,
+      bands: [[71, "500 mg q6h"], [41, "500 mg q8h"], [21, "500 mg q12h"], [6, "250 mg q12h"], [0, "Not recommended except with dialysis"]],
+      note: "Seizure risk if dose adjustment is delayed" },
+    { n: "Ertapenem", usual: "1 g q24h", load: null,
+      bands: [[31, "1 g q24h"], [0, "500 mg q24h"]] },
+    { n: "Vancomycin", usual: "per AUC/level",
+      load: function (w) {
+        return "25 mg/kg ≈ " + mg(w, 25, 250, 3000) + " mg (max 3 g)";
+      },
+      loadNote: "Range 20–35 mg/kg based on severity, using actual body weight",
+      bands: [
+        [91, function (w) { return "15 mg/kg ≈ " + mg(w, 15, 250) + " mg q8–12h"; }],
+        [50, function (w) { return "15 mg/kg ≈ " + mg(w, 15, 250) + " mg q12h"; }],
+        [20, function (w) { return "15 mg/kg ≈ " + mg(w, 15, 250) + " mg q24h"; }],
+        [0, function (w) { return "15 mg/kg ≈ " + mg(w, 15, 250) + " mg once, next dose per level"; }]
+      ],
+      note: "Approximate starting dose by actual body weight. Adjust afterward by AUC (400–600) or levels and hospital protocol" },
+    { n: "Teicoplanin", usual: "6–12 mg/kg q24h",
+      load: function (w) {
+        return "12 mg/kg q12h × 3–5 doses ≈ " + mg(w, 12, 100) + " mg per dose";
+      },
+      loadNote: "Round to the nearest vial size",
+      bands: [[61, "6–12 mg/kg q24h"], [40, "Half dose q24h or same dose q48h (from day 4)"], [0, "One-third dose q24h or same dose q72h (from day 4)"]] },
+    { n: "Gentamicin", usual: "per level",
+      load: function (w) {
+        return "5–7 mg/kg ≈ " + mg(w, 5, 10) + "–" + mg(w, 7, 10) + " mg once";
+      },
+      loadNote: "First dose is full even with renal impairment",
+      bands: [[0, "Dosing interval set by level (TDM/nomogram)"]] },
+    { n: "Amikacin", usual: "per level",
+      load: function (w) {
+        return "15–20 mg/kg ≈ " + mg(w, 15, 50) + "–" + mg(w, 20, 50) + " mg once";
+      },
+      loadNote: "First dose is full even with renal impairment",
+      bands: [[0, "Dosing interval set by level (TDM)"]] },
+    { n: "Colistin", usual: "per CrCl",
+      load: "9 MU once (≈ 300 mg colistin base)",
+      loadNote: "Loading dose is fixed regardless of renal function",
+      bands: [[0, "Per CrCl and hospital protocol (Garonzik or product label)"]] },
+    { n: "Ciprofloxacin", usual: "400 mg IV q8–12h", load: null,
+      bands: [[51, "Usual dose"], [30, "250–500 mg PO q12h"], [0, "250–500 mg PO q18–24h (IV: 200–400 mg q18–24h)"]] },
+    { n: "Levofloxacin", usual: "750 mg q24h",
+      load: "750 mg (full dose)",
+      bands: [[50, "750 mg q24h"], [20, "750 mg q48h"], [0, "500 mg q48h"]] },
+    { n: "TMP-SMX", usual: "", load: null,
+      bands: [[31, "Usual dose"], [15, "50% of dose"], [0, "Not recommended"]],
+      note: "Raises potassium" },
+    { n: "Fluconazole", usual: "",
+      load: "Double the daily dose (e.g. 800 mg then 400 mg)",
+      bands: [[51, "Usual dose"], [0, "50% of dose"]] },
+    { n: "Acyclovir IV", usual: "10 mg/kg q8h", load: null,
+      bands: [[51, "q8h"], [25, "q12h"], [10, "q24h"], [0, "5 mg/kg q24h"]] },
+    { n: "Daptomycin", usual: "", load: null,
+      bands: [[30, "Usual dose q24h"], [0, "Same dose q48h"]] },
+    { n: "Clarithromycin", usual: "", load: null,
+      bands: [[30, "Usual dose"], [0, "50% of dose"]] },
+    { n: "Nitrofurantoin", usual: "", load: null,
+      bands: [[30, "Allowed (efficacy decreases as CrCl falls)"], [0, "Avoid"]] }
+  ];
+  // CrCl-based warnings: [min CrCl for band, level (avoid/caution/null), text]
+  var FLAGS = {
+    "Nitrofurantoin": [[30, null, ""], [0, "avoid", "Efficacy decreases and toxicity increases as CrCl falls"]],
+    "TMP-SMX": [[31, null, ""], [15, "caution", "Raises potassium and creatinine. Reduce dose by 50% and monitor K"], [0, "avoid", "Not recommended"]],
+    "Imipenem": [[51, null, ""], [6, "caution", "Seizure risk — keep to the adjusted dose"], [0, "avoid", "Not recommended except with dialysis"]],
+    "Cefepime": [[61, null, ""], [0, "caution", "Neurotoxicity risk (encephalopathy and seizures) if the dose is not adjusted"]],
+    "Ertapenem": [[31, null, ""], [0, "caution", "Neurologic side-effect risk if the dose is not reduced to 500 mg"]],
+    "Vancomycin": [[0, "caution", "Nephrotoxic, especially with pip-tazo or aminoglycosides. Monitor creatinine and levels"]],
+    "Gentamicin": [[0, "caution", "Nephrotoxic and ototoxic. Use an alternative if possible; otherwise use TDM and the shortest course"]],
+    "Amikacin": [[0, "caution", "Nephrotoxic and ototoxic. Use an alternative if possible; otherwise use TDM and the shortest course"]],
+    "Colistin": [[0, "caution", "Nephrotoxic. Use only when there is no alternative and monitor creatinine"]],
+    "Acyclovir IV": [[0, "caution", "Crystal nephropathy risk. Give with good hydration"]]
+  };
+  function flagFor(name, c) {
+    var b = FLAGS[name];
+    if (!b) return null;
+    for (var i = 0; i < b.length; i++) {
+      if (c >= b[i][0]) return b[i][1] ? { level: b[i][1], text: b[i][2] } : null;
+    }
+    return null;
+  }
+  // Drug selection per condition: [drug name, role (first/alt/add), note]
+  var ROLE = { first: "First choice", alt: "Alternative", add: "Add per scenario" };
+  var ROLE_ORDER = { first: 0, alt: 1, add: 2 };
+  var DISEASES = [
+    { id: "cap", name: "Severe community-acquired pneumonia (CAP)",
+      picks: [
+        ["Levofloxacin", "alt", "With a beta-lactam in place of azithromycin"],
+        ["Vancomycin", "add", "If MRSA risk"],
+        ["Piperacillin-tazobactam", "add", "In place of ceftriaxone if Pseudomonas risk"],
+        ["Cefepime", "add", "In place of ceftriaxone if Pseudomonas risk"],
+        ["Meropenem", "add", "In place of ceftriaxone if Pseudomonas or MDR risk"]
+      ],
+      nonAdj: "Base regimen: Ceftriaxone + Azithromycin (neither needs renal adjustment). Linezolid is an alternative to vancomycin for MRSA.",
+      tip: "Choice depends on severity and risk factors." },
+    { id: "hap", name: "Hospital-acquired / ventilator-associated pneumonia (HAP/VAP)",
+      picks: [
+        ["Piperacillin-tazobactam", "first", "One of these anti-pseudomonal agents"],
+        ["Cefepime", "first", "One of these anti-pseudomonal agents"],
+        ["Meropenem", "first", "One of these, especially if MDR risk"],
+        ["Imipenem", "alt", "Alternative to meropenem"],
+        ["Ceftazidime", "alt", "Alternative anti-pseudomonal agent"],
+        ["Vancomycin", "add", "If MRSA risk"],
+        ["Levofloxacin", "add", "A second anti-Pseudomonal agent if MDR risk or septic shock"],
+        ["Ciprofloxacin", "add", "Same rationale as levofloxacin"],
+        ["Amikacin", "add", "A second anti-Pseudomonal agent if MDR risk or septic shock"],
+        ["Gentamicin", "add", "Same rationale as amikacin"],
+        ["Colistin", "alt", "If XDR or carbapenem-resistant, usually combined with another agent"]
+      ],
+      nonAdj: "Linezolid is an alternative to vancomycin for MRSA (no renal adjustment needed).",
+      tip: "De-escalate or stop based on culture results." },
+    { id: "cuti", name: "Complicated UTI / Pyelonephritis / Urosepsis",
+      picks: [
+        ["Cefepime", "first", "If stable or septic"],
+        ["Piperacillin-tazobactam", "first", "If stable or septic"],
+        ["Meropenem", "alt", "Septic shock or ESBL"],
+        ["Ertapenem", "alt", "ESBL in a patient who is not critically ill"],
+        ["Levofloxacin", "alt", "If local quinolone resistance is low"],
+        ["Ciprofloxacin", "alt", "Same rationale as levofloxacin"],
+        ["Amikacin", "alt", "If no alternative is available (nephrotoxic)"],
+        ["Gentamicin", "alt", "If no alternative is available (nephrotoxic)"],
+        ["TMP-SMX", "alt", "Only if the isolate is susceptible"]
+      ],
+      nonAdj: "Ceftriaxone (no renal adjustment) if the patient is stable and local resistance is low.",
+      tip: "Nitrofurantoin is not appropriate for pyelonephritis or urosepsis." },
+    { id: "cystitis", name: "Uncomplicated cystitis",
+      picks: [
+        ["Nitrofurantoin", "first", "5 days, and only when CrCl is 30 or above"],
+        ["TMP-SMX", "first", "3 days if local resistance is under 20%"],
+        ["Ciprofloxacin", "alt", "Best reserved for cases with no other option"],
+        ["Levofloxacin", "alt", "Same rationale as ciprofloxacin"]
+      ],
+      nonAdj: "Fosfomycin 3 g as a single dose.",
+      tip: "" },
+    { id: "iai", name: "Intra-abdominal infection",
+      picks: [
+        ["Piperacillin-tazobactam", "first", "Covers anaerobes on its own"],
+        ["Cefepime", "first", "Must be combined with metronidazole"],
+        ["Ertapenem", "alt", "Mild-to-moderate community-acquired disease, and ESBL"],
+        ["Meropenem", "alt", "Severe, hospital-acquired, or ESBL disease"],
+        ["Imipenem", "alt", "Alternative to meropenem"],
+        ["Levofloxacin", "alt", "With metronidazole if beta-lactam allergy"],
+        ["Ciprofloxacin", "alt", "With metronidazole if beta-lactam allergy"]
+      ],
+      nonAdj: "Metronidazole (no renal adjustment) paired with cefepime or a quinolone. Ceftriaxone + Metronidazole for mild community-acquired cases.",
+      tip: "Source control (surgery or drainage) matters more than changing the antibiotic." },
+    { id: "ssti", name: "Skin and soft tissue infection (SSTI)",
+      picks: [
+        ["Cefazolin", "first", "Non-purulent cellulitis or MSSA"],
+        ["Vancomycin", "first", "MRSA, or severe disease pending culture results"],
+        ["Daptomycin", "alt", "Alternative to vancomycin for MRSA"],
+        ["TMP-SMX", "alt", "Oral option for mild (purulent) MRSA"],
+        ["Piperacillin-tazobactam", "add", "Necrotizing infection: with vancomycin and clindamycin"],
+        ["Meropenem", "add", "Necrotizing infection: alternative to pip-tazo"]
+      ],
+      nonAdj: "Clindamycin (no renal adjustment) reduces toxin production in necrotizing infection. Linezolid is an MRSA alternative.",
+      tip: "Necrotizing fasciitis needs urgent surgery, not antibiotics alone." },
+    { id: "sepsis", name: "Sepsis / Bacteremia (unknown source)",
+      picks: [
+        ["Piperacillin-tazobactam", "first", "Broad-spectrum empiric coverage"],
+        ["Cefepime", "first", "Broad-spectrum empiric coverage"],
+        ["Meropenem", "first", "If ESBL, MDR risk, or shock"],
+        ["Vancomycin", "add", "If MRSA risk (line, skin, or endovascular source)"],
+        ["Amikacin", "add", "If shock or MDR risk (single dose or short course)"],
+        ["Gentamicin", "add", "Same rationale as amikacin"]
+      ],
+      nonAdj: "Ceftriaxone if community-acquired with low MDR risk.",
+      tip: "Give the first full dose within an hour of recognizing septic shock, with no renal reduction." },
+    { id: "mening", name: "Bacterial meningitis",
+      picks: [
+        ["Vancomycin", "first", "Part of the empiric regimen alongside a cephalosporin"],
+        ["Cefepime", "alt", "Hospital-acquired, or post-neurosurgery"],
+        ["Ceftazidime", "alt", "Same rationale as cefepime if Pseudomonas risk"],
+        ["Meropenem", "alt", "Hospital-acquired or ESBL"],
+        ["Acyclovir IV", "add", "If HSV encephalitis is suspected, until ruled out"]
+      ],
+      nonAdj: "Ceftriaxone 2 g every 12 hours (no renal adjustment). Ampicillin if age over 50 or immunocompromised (renally adjusted, not included in this calculator).",
+      tip: "Give dexamethasone before or with the first antibiotic dose if pneumococcal disease is suspected." },
+    { id: "ie", name: "Infective endocarditis",
+      picks: [
+        ["Vancomycin", "first", "MRSA, empiric therapy, or prosthetic valve"],
+        ["Cefazolin", "first", "MSSA"],
+        ["Daptomycin", "alt", "Alternative for MRSA (dose is higher than usual — check the reference)"],
+        ["Gentamicin", "add", "For synergy in specific cases (prosthetic valve or enterococci) at low doses, with renal monitoring"]
+      ],
+      nonAdj: "Oxacillin or cloxacillin for MSSA. Rifampin added for staphylococcal prosthetic valve infection. Ceftriaxone + Ampicillin for E. faecalis (ampicillin is renally adjusted).",
+      tip: "Regimen depends on blood culture results and native vs prosthetic valve. Follow AHA/ESC guidance and involve ID." },
+    { id: "bone", name: "Bone and joint infection",
+      picks: [
+        ["Vancomycin", "first", "MRSA"],
+        ["Cefazolin", "first", "MSSA"],
+        ["Cefepime", "alt", "Gram-negative organisms or Pseudomonas"],
+        ["Daptomycin", "alt", "Alternative for MRSA"],
+        ["Levofloxacin", "alt", "Oral step-down for gram-negative organisms, and with rifampin for staph"],
+        ["Ciprofloxacin", "alt", "Oral step-down for gram-negative organisms"]
+      ],
+      nonAdj: "Rifampin (only alongside prosthetic material). Clindamycin as an oral alternative.",
+      tip: "Obtain a biopsy or culture before starting antibiotics if the patient is stable." },
+    { id: "fn", name: "Febrile neutropenia",
+      picks: [
+        ["Piperacillin-tazobactam", "first", "Anti-pseudomonal beta-lactam"],
+        ["Cefepime", "first", "Anti-pseudomonal beta-lactam"],
+        ["Meropenem", "alt", "If ESBL risk or the patient is unstable"],
+        ["Imipenem", "alt", "Alternative to meropenem"],
+        ["Vancomycin", "add", "Catheter infection, SSTI, pneumonia, or hemodynamic instability"],
+        ["Amikacin", "add", "If shock or MDR risk"],
+        ["Gentamicin", "add", "Same rationale as amikacin"]
+      ],
+      nonAdj: "Micafungin or caspofungin (no renal adjustment) if fever persists 4–7 days.",
+      tip: "First dose within an hour, with no renal reduction." },
+    { id: "candida", name: "Candidemia",
+      picks: [
+        ["Fluconazole", "alt", "Stable patient with a susceptible isolate, or step-down after stabilization"]
+      ],
+      nonAdj: "Echinocandins (micafungin, caspofungin, or anidulafungin) are usually first choice (no renal adjustment).",
+      tip: "Remove the central line and perform an eye exam." },
+    { id: "hsv", name: "HSV encephalitis",
+      picks: [
+        ["Acyclovir IV", "first", "10 mg/kg every 8 hours for 14–21 days"]
+      ],
+      nonAdj: "",
+      tip: "Ensure good hydration, and monitor creatinine and neurotoxicity." },
+    { id: "dfi", name: "Diabetic foot infection", classificationOnly: true },
+    { id: "ssi", name: "Surgical site infection", classificationOnly: true },
+    { id: "cauti", name: "Catheter-associated urinary tract infection (CAUTI)", classificationOnly: true },
+    { id: "pji", name: "Prosthetic joint infection", classificationOnly: true },
+    { id: "brainabs", name: "Brain abscess", classificationOnly: true },
+    { id: "nstI", name: "Necrotizing soft-tissue infection", classificationOnly: true },
+    { id: "gnb", name: "Gram-negative bacteremia", classificationOnly: true },
+    { id: "endovascular", name: "Endovascular infection", classificationOnly: true },
+    { id: "device", name: "Medical device-associated infection", classificationOnly: true },
+    { id: "postop", name: "Postoperative infection", classificationOnly: true }
+  ];
+  // Administration instructions / special notes / avoid-with
+  var INFO = {
+    "Piperacillin-tazobactam": {
+      admin: "IV over 30 minutes. In the ICU or for Pseudomonas, give as extended infusion over 4 hours (after a 30-minute first dose).",
+      special: "Relatively high sodium content. AKI risk is higher when combined with vancomycin.",
+      avoid: "Do not mix with aminoglycosides in the same bag or line. Caution with vancomycin and methotrexate."
+    },
+    "Amoxicillin-clavulanate IV": {
+      admin: "Slow IV push over 3–4 minutes, or infusion over 30–40 minutes. Use immediately after reconstitution.",
+      special: "Risk of cholestatic jaundice, especially with elderly patients and prolonged treatment.",
+      avoid: "Do not mix with aminoglycosides, blood products, protein solutions, or lipids. Not suitable in dextrose or bicarbonate solutions. Caution with allopurinol, methotrexate, and warfarin."
+    },
+    "Cefazolin": {
+      admin: "IV push over 3–5 minutes, or infusion over 30 minutes.",
+      special: "For surgical prophylaxis: 2 g (3 g if weight is 120 kg or more) within 60 minutes before incision.",
+      avoid: "Give separately from aminoglycosides. Probenecid raises its level, and warfarin may increase INR."
+    },
+    "Cefepime": {
+      admin: "IV over 30 minutes, or extended infusion over 3–4 hours for Pseudomonas.",
+      special: "Monitor mental status: encephalopathy, myoclonus, and non-convulsive seizures can occur with renal impairment.",
+      avoid: "Do not mix with aminoglycosides or vancomycin in the same syringe or line (check Y-site compatibility)."
+    },
+    "Ceftazidime": {
+      admin: "IV over 30 minutes, or extended/continuous infusion in the ICU.",
+      special: "CO2 forms on reconstitution — vent the pressure before drawing up the dose.",
+      avoid: "Do not mix with vancomycin or aminoglycosides in the same solution. Antagonism with chloramphenicol."
+    },
+    "Meropenem": {
+      admin: "IV over 15–30 minutes (or extended infusion over 3 hours in the ICU), or bolus over 3–5 minutes.",
+      special: "Lowers the seizure threshold (less than imipenem).",
+      avoid: "Contraindicated with valproic acid: sharply lowers its level and can trigger seizures. Probenecid raises its level."
+    },
+    "Imipenem": {
+      admin: "500 mg over 20–30 minutes, and 1 g over 40–60 minutes. Rapid infusion causes nausea.",
+      special: "Highest seizure risk among the carbapenems, especially with renal impairment or CNS disease.",
+      avoid: "Contraindicated with valproic acid. Seizure risk with ganciclovir."
+    },
+    "Ertapenem": {
+      admin: "IV over 30 minutes, or IM (reconstituted in lidocaine).",
+      special: "",
+      avoid: "Do not mix or co-administer with other drugs in the same line, and do not dilute with a dextrose-containing solution. Contraindicated with valproic acid."
+    },
+    "Vancomycin": {
+      admin: "IV over at least one hour (maximum rate 10 mg/min: i.e. 1 g over 60 minutes, 2 g over two hours). Concentration up to 5 mg/mL in a peripheral line.",
+      special: "Rapid infusion causes vancomycin infusion reaction (flushing and hypotension). Monitor creatinine and levels.",
+      avoid: "Do not mix with beta-lactams or heparin in the same line. Nephrotoxicity risk increases with pip-tazo, aminoglycosides, loop diuretics, amphotericin, and IV contrast."
+    },
+    "Teicoplanin": {
+      admin: "IV bolus over 3–5 minutes, or infusion over 30 minutes (or IM).",
+      special: "Monitor CBC (thrombocytopenia) and target trough level based on the indication.",
+      avoid: "Do not mix with aminoglycosides in the same syringe. Caution with other nephrotoxic and ototoxic drugs."
+    },
+    "Gentamicin": {
+      admin: "IV over 30–60 minutes (or IM).",
+      special: "Levels per a nomogram (e.g. Hartford) or peak/trough per your protocol. Use adjusted weight in obesity.",
+      avoid: "Do not mix with beta-lactams in the same bag (reduces efficacy). Avoid combining with vancomycin, loop diuretics, amphotericin, and IV contrast. Caution with neuromuscular blockers and myasthenia gravis."
+    },
+    "Amikacin": {
+      admin: "IV over 30–60 minutes (or IM).",
+      special: "Target level per protocol. Use adjusted weight in obesity.",
+      avoid: "Do not mix with beta-lactams in the same bag. Avoid combining with vancomycin, loop diuretics, amphotericin, and IV contrast. Caution with neuromuscular blockers and myasthenia gravis."
+    },
+    "Colistin": {
+      admin: "IV over 30–60 minutes. Maintenance dosing starts 12–24 hours after the loading dose.",
+      special: "Watch the dose units: 1 MU ≈ 80 mg colistimethate ≈ 33 mg colistin base. Monitor creatinine and neurotoxicity.",
+      avoid: "Avoid combining with other nephrotoxic drugs. Caution with neuromuscular blockers (risk of respiratory paralysis)."
+    },
+    "Ciprofloxacin": {
+      admin: "IV over 60 minutes. Oral: 2 hours before, or 6 hours after, dairy products, calcium, iron, or antacids.",
+      special: "Tendon rupture risk (higher with corticosteroids, elderly patients, and renal impairment) and QT prolongation.",
+      avoid: "Contraindicated with tizanidine. Raises theophylline and warfarin levels. Caution with other QT-prolonging drugs."
+    },
+    "Levofloxacin": {
+      admin: "750 mg IV over 90 minutes (250–500 mg over 60 minutes). Oral: separate from antacids, iron, and multivitamins by 2 hours.",
+      special: "QT prolongation, dysglycemia, and tendinopathy.",
+      avoid: "Avoid combining with amiodarone, sotalol, and other QT-prolonging drugs. Caution with corticosteroids, insulin, sulfonylureas, and warfarin."
+    },
+    "TMP-SMX": {
+      admin: "IV: each 5 mL diluted in 125 mL D5W (100 mL if fluid-restricted), infused over 60–90 minutes.",
+      special: "Monitor potassium, creatinine, and CBC. A rise in creatinine can reflect tubular secretion interference rather than true renal decline.",
+      avoid: "Do not mix with other drugs. Contraindicated with dofetilide. Raises potassium with ACE inhibitors, ARBs, and spironolactone, and raises INR with warfarin. Caution with methotrexate, phenytoin, and sulfonylureas."
+    },
+    "Fluconazole": {
+      admin: "IV at a maximum rate of 200 mg per hour.",
+      special: "Prolongs the QT interval.",
+      avoid: "Caution with warfarin, phenytoin, statins (especially simvastatin and lovastatin), and QT-prolonging drugs like amiodarone."
+    },
+    "Acyclovir IV": {
+      admin: "IV infusion over one hour (not bolus), at a concentration under 7 mg/mL.",
+      special: "Ensure good hydration to avoid crystal nephropathy. Can cause neurotoxicity with renal impairment. Use ideal or adjusted weight in obesity.",
+      avoid: "Caution with other nephrotoxic drugs. Probenecid raises its level."
+    },
+    "Daptomycin": {
+      admin: "IV over 30 minutes, or push over two minutes. Dilute in normal saline.",
+      special: "Monitor CPK weekly. Not suitable for pneumonia (inactivated by pulmonary surfactant).",
+      avoid: "Do not mix with dextrose solutions. Consider holding statins temporarily (myopathy risk)."
+    },
+    "Clarithromycin": {
+      admin: "IV over 60 minutes (concentration 2 mg/mL).",
+      special: "Prolongs the QT interval, and is a potent CYP3A4 inhibitor.",
+      avoid: "Contraindicated with colchicine (especially with renal impairment), simvastatin, and lovastatin. Caution with warfarin, digoxin, amiodarone, ticagrelor, the DOACs, and other QT-prolonging drugs."
+    },
+    "Nitrofurantoin": {
+      admin: "Oral, taken with food.",
+      special: "Not for kidney infection (pyelonephritis) or prostatitis. Long-term use can cause pulmonary or hepatic toxicity and neuropathy.",
+      avoid: "Antacids containing magnesium trisilicate reduce its absorption. Probenecid raises its blood level and lowers it in urine."
+    }
+  };
+  function infoHtml(name) {
+    var i = INFO[name];
+    if (!i) return "";
+    var h = '<details class="more"><summary>Administration, special notes, and drug interactions</summary>';
+    if (i.admin) h += '<div class="line info"><span class="tag">Administration</span><span class="txt">' + esc(i.admin) + "</span></div>";
+    if (i.special) h += '<div class="line info"><span class="tag">Special notes</span><span class="txt">' + esc(i.special) + "</span></div>";
+    if (i.avoid) h += '<div class="line info no"><span class="tag">Avoid with</span><span class="txt">' + esc(i.avoid) + "</span></div>";
+    return h + "</details>";
+  }
+  var NO_ADJ = "No renal adjustment needed: Ceftriaxone, Azithromycin, Doxycycline, Linezolid, Moxifloxacin, Clindamycin, Metronidazole, Micafungin";
+
+  // ---------- page elements ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { sex: "m", unit: "mg", filter: "all", dz: "" };
+
+  function num(s) {
+    s = String(s || "").trim()
+      .replace(/[٠-٩]/g, function (d) { return "٠١٢٣٤٥٦٧٨٩".indexOf(d); })
+      .replace(/[٫,،]/g, ".");
+    if (s === "") return null;
+    var v = Number(s);
+    return isNaN(v) ? null : v;
+  }
+
+  function pick(bands, c) {
+    for (var i = 0; i < bands.length; i++) if (c >= bands[i][0]) return bands[i][1];
+    return bands[bands.length - 1][1];
+  }
+
+  function category(c) {
+    if (c >= 90) return ["Normal or near-normal", 4];
+    if (c >= 60) return ["Mildly decreased", 3];
+    if (c >= 30) return ["Moderately decreased", 2];
+    if (c >= 15) return ["Severely decreased", 1];
+    return ["Kidney failure", 0];
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+  }
+
+  function showErr(msg) {
+    var e = $("err");
+    if (msg) { e.textContent = msg; e.hidden = false; } else { e.hidden = true; }
+  }
+
+  function hideResults() { $("hero").hidden = true; $("results").hidden = true; }
+
+  // ---------- calculation and display ----------
+  function update() {
+    var ageRaw = $("age").value, wtRaw = $("wt").value, scrRaw = $("scr").value;
+    if (!ageRaw.trim() || !wtRaw.trim() || !scrRaw.trim()) { showErr(""); hideResults(); return; }
+
+    var age = num(ageRaw), wt = num(wtRaw), scr = num(scrRaw);
+    if (age === null || age < 18 || age > 120) { showErr("Age must be a number from 18 to 120 (adults only)."); hideResults(); return; }
+    if (wt === null || wt < 20 || wt > 300) { showErr("Weight must be a number in kg from 20 to 300."); hideResults(); return; }
+    if (scr === null || scr <= 0) { showErr("Enter the creatinine value as a number."); hideResults(); return; }
+
+    var scrMg = state.unit === "um" ? scr / 88.4 : scr;
+    if (scrMg < 0.1 || scrMg > 20) {
+      showErr(state.unit === "um" ? "That value looks implausible. Check that the unit is µmol/L." : "That value looks implausible. If the number is large, try the µmol/L unit.");
+      hideResults(); return;
+    }
+    showErr("");
+
+    var crcl = ((140 - age) * wt) / (72 * scrMg);
+    if (state.sex === "f") crcl *= 0.85;
+    var c = Math.max(0, Math.round(crcl));
+
+    var cat = category(c);
+    $("crcl").textContent = c;
+    $("cat").textContent = cat[0];
+    var segs = $("scale").children;
+    for (var i = 0; i < segs.length; i++) segs[i].className = i <= cat[1] ? "on" : "";
+    $("formula").textContent = "(140 − " + age + ") × " + wt + " ÷ (72 × " + scrMg.toFixed(2) + ")" +
+      (state.sex === "f" ? " × 0.85" : "") + (state.unit === "um" ? "  (creatinine converted from µmol/L)" : "");
+    $("hero").hidden = false;
+
+    renderList(c, wt);
+    $("results").hidden = false;
+  }
+
+  function renderList(c, wt) {
+    var withLoad = 0, withFlag = 0, avoidNames = [], cautionNames = [];
+    var rows = DRUGS.map(function (d) {
+      var f = flagFor(d.n, c);
+      if (d.load) withLoad++;
+      if (f) { withFlag++; (f.level === "avoid" ? avoidNames : cautionNames).push(d.n); }
+      return { d: d, f: f };
+    });
+    $("fltLoad").textContent = "Loading (" + withLoad + ")";
+    $("fltFlag").textContent = "Avoid / Caution (" + withFlag + ")";
+
+    var box = "";
+    if (avoidNames.length) {
+      box += '<div><b class="r">Avoid at CrCl ' + c + ':</b> <bdi>' + esc(avoidNames.join(", ")) + "</bdi></div>";
+    } else {
+      box += '<div><b class="r">No drug in the list needs to be avoided at CrCl ' + c + ".</b></div>";
+    }
+    if (cautionNames.length) {
+      box += '<div><b class="p">Caution (nephrotoxic or needs attention):</b> <bdi>' + esc(cautionNames.join(", ")) + "</bdi></div>";
+    }
+    $("avoidBox").innerHTML = box;
+    $("avoidBox").className = "avoidbox" + (avoidNames.length ? " has" : "");
+
+    var dz = null, pickMap = {};
+    if (state.dz) {
+      dz = DISEASES.filter(function (x) { return x.id === state.dz; })[0] || null;
+      if (dz) dz.picks.forEach(function (p) { pickMap[p[0]] = { role: p[1], note: p[2] }; });
+    }
+    var dzb = $("dzBox");
+    if (dz) {
+      if (dz.classificationOnly) {
+        dzb.innerHTML = "<div><b><bdi>" + esc(dz.name) + "</bdi></b></div>" +
+          '<div class="tip">Disease classification only. No treatment regimen is displayed for this category.</div>';
+      } else {
+        dzb.innerHTML = "<div><b><bdi>" + esc(dz.name) + "</bdi></b></div>" +
+          (dz.nonAdj ? "<div>" + esc(dz.nonAdj) + "</div>" : "") +
+          (dz.tip ? '<div class="tip">' + esc(dz.tip) + "</div>" : "") +
+          '<div class="tip">General empiric choices — final decision depends on culture results and the local antibiogram.</div>';
+        rows.sort(function (a, b) { return ROLE_ORDER[pickMap[a.d.n] ? pickMap[a.d.n].role : "add"] - ROLE_ORDER[pickMap[b.d.n] ? pickMap[b.d.n].role : "add"]; });
+      }
+      dzb.hidden = false;
+    } else {
+      dzb.hidden = true;
+    }
+
+    var html = "";
+    rows.forEach(function (r) {
+      var d = r.d, f = r.f;
+      if (state.filter === "load" && !d.load) return;
+      if (state.filter === "flag" && !f) return;
+      var pk = pickMap[d.n];
+      if (dz && (!pk || dz.classificationOnly)) return;
+      var loadTxt = d.load ? (typeof d.load === "function" ? d.load(wt) : d.load) : null;
+      var maint = pick(d.bands, c);
+      if (typeof maint === "function") maint = maint(wt);
+
+      html += '<li class="drug' + (d.load ? " hasload" : "") + (f && f.level === "avoid" ? " avoid" : "") + '">' +
+        '<div class="head"><div><bdi class="name">' + esc(d.n) + "</bdi>" +
+        (d.usual ? '<span class="usual">Usual: <bdi>' + esc(d.usual) + "</bdi></span>" : "") + "</div>" +
+        '<div class="pills">' +
+        (pk ? '<span class="pill ' + pk.role + '">' + ROLE[pk.role] + "</span>" : "") +
+        (f ? '<span class="pill ' + f.level + '">' + (f.level === "avoid" ? "Avoid" : "Caution") + "</span>" : "") +
+        '<span class="pill ' + (d.load ? "yes" : "no") + '">' + (d.load ? "Has loading dose" : "No loading dose") + "</span></div></div>";
+      if (pk && pk.note) {
+        html += '<div class="line dzl"><span class="tag">For this condition</span><span class="txt">' + esc(pk.note) + "</span></div>";
+      }
+
+      if (loadTxt) {
+        html += '<div class="line load"><span class="tag">Loading dose</span><span class="txt">' + esc(loadTxt) +
+          (d.loadNote ? '<span class="hint">' + esc(d.loadNote) + "</span>" : "") + "</span></div>";
+      }
+      html += '<div class="line maint"><span class="tag">Maintenance</span><span class="txt">' + esc(maint) +
+        (d.note ? '<span class="hint">' + esc(d.note) + "</span>" : "") + "</span></div>";
+      if (f) {
+        html += '<div class="line flag ' + f.level + '"><span class="tag">' + (f.level === "avoid" ? "Avoid" : "Caution") +
+          '</span><span class="txt">' + esc(f.text) + "</span></div>";
+      }
+      html += infoHtml(d.n) + "</li>";
+    });
+
+    if (state.filter === "all" && !dz) {
+      html += '<li class="drug"><span class="txt hint" style="margin:0">' + esc(NO_ADJ) + "</span></li>";
+    }
+    $("list").innerHTML = html || '<li class="empty">No drugs match this filter at this CrCl</li>';
+  }
+
+  // ---------- events ----------
+  ["age", "wt", "scr"].forEach(function (id) { $(id).addEventListener("input", update); });
+
+  function bindSeg(segId, key) {
+    $(segId).addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b) return;
+      state[key] = b.getAttribute("data-v");
+      Array.prototype.forEach.call($(segId).children, function (x) {
+        x.setAttribute("aria-pressed", x === b ? "true" : "false");
+      });
+      update();
+    });
+  }
+  var dzSel = $("dz");
+  DISEASES.forEach(function (d) {
+    var o = document.createElement("option");
+    o.value = d.id;
+    o.textContent = d.name;
+    dzSel.appendChild(o);
+  });
+  dzSel.addEventListener("change", function () { state.dz = dzSel.value; update(); });
+  bindSeg("sexSeg", "sex");
+  bindSeg("unitSeg", "unit");
+  bindSeg("fltSeg", "filter");
+})();
+</script>
+</body>
+</html>
